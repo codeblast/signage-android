@@ -2,10 +2,12 @@ package com.codeblast.signage;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
+import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.TypedValue;
+import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.TextView;
@@ -44,7 +46,19 @@ public class FullscreenActivity extends Activity {
    * The flags to pass to {@link SystemUiHider#getInstance}.
    */
   private static final int HIDER_FLAGS = SystemUiHider.FLAG_HIDE_NAVIGATION;
+  private static final String TAG = "FullscreenActivity";
   Handler mHideHandler = new Handler();
+  /**
+   * The instance of the {@link SystemUiHider} for this activity.
+   */
+  private SystemUiHider mSystemUiHider;
+  Runnable mHideRunnable = new Runnable() {
+    @Override
+    public void run() {
+      mSystemUiHider.hide();
+      logFontMetrics();
+    }
+  };
   /**
    * Touch listener to use for in-layout UI controls to delay hiding the
    * system UI. This is to prevent the jarring behavior of controls going away
@@ -57,16 +71,6 @@ public class FullscreenActivity extends Activity {
         delayedHide(AUTO_HIDE_DELAY_MILLIS);
       }
       return false;
-    }
-  };
-  /**
-   * The instance of the {@link SystemUiHider} for this activity.
-   */
-  private SystemUiHider mSystemUiHider;
-  Runnable mHideRunnable = new Runnable() {
-    @Override
-    public void run() {
-      mSystemUiHider.hide();
     }
   };
 
@@ -135,14 +139,30 @@ public class FullscreenActivity extends Activity {
     });
 
     AutofitHelper.create((TextView) contentView)
-        .setMaxLines(4)
-        .setMaxTextSize(TypedValue.COMPLEX_UNIT_SP, 100)
-        .setMinTextSize(8);
+        .setMaxLines(4) // TODO: we can guess a an appropriate number based on the number of words in the text etc.
+        .setMaxTextSize(280) // TODO: this should probably roughly screenHeight / maxLines? Store in dimens.xml ...
+        .setMinTextSize(10);
 
     // Upon interacting with UI controls, delay any scheduled hide()
     // operations to prevent the jarring behavior of controls going away
     // while interacting with the UI.
     findViewById(R.id.dummy_button).setOnTouchListener(mDelayHideTouchListener);
+  }
+
+  private void logFontMetrics() {
+    final DisplayMetrics metrics = getResources().getDisplayMetrics();
+    Log.d(TAG, " density=" + metrics.density);
+    Log.d(TAG, " heightPixels=" + metrics.heightPixels);
+    Log.d(TAG, " widthPixels=" + metrics.widthPixels);
+    Log.d(TAG, " heightDp=" + metrics.heightPixels / metrics.density);
+    Log.d(TAG, " widthDp=" + metrics.widthPixels / metrics.density);
+    final Configuration config = getResources().getConfiguration();
+    Log.d(TAG, " configHeightDp=" + config.screenHeightDp);
+    Log.d(TAG, " configWidthDp=" + config.screenWidthDp);
+    Log.d(TAG, " fontScale=" + config.fontScale);
+    final TextView contentView = (TextView) findViewById(R.id.message);
+    Log.d(TAG, " textSizePixels=" + contentView.getTextSize());
+    Log.d(TAG, " textSizeSp=" + contentView.getTextScaleX() * metrics.density * config.fontScale);
   }
 
   @Override
